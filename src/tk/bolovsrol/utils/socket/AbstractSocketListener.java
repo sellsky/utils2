@@ -159,7 +159,6 @@ public abstract class AbstractSocketListener extends HaltableThread {
             }
             serverSocket.setReuseAddress(REUSE_ADDRESS);
             serverSocket.bind(bindAddress);
-            return;
         } catch (Exception e) {
             throw new IllegalArgumentException("Couldn't bind Server Socket to address " + Spell.get(bindAddress), e);
         }
@@ -213,5 +212,9 @@ public abstract class AbstractSocketListener extends HaltableThread {
         terminating = true;
         close();
         super.shutdown();
+    }
+
+    public ServerSocketFactory getSocketFactory() {
+        return socketFactory;
     }
 }

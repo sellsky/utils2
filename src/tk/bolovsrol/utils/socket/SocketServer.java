@@ -39,7 +39,7 @@ public class SocketServer {
 
     private final LogDome log;
     private final ProcessorSocketListener.Conf pslConf;
-    private final Map<InetSocketAddress, ProcessorSocketListener> bound = new HashMap<InetSocketAddress, ProcessorSocketListener>();
+    private final Map<InetSocketAddress, ProcessorSocketListener> bound = new HashMap<>();
 
     private SocketServer(LogDome log, ProcessorSocketListener.Conf pslConf) {
         this.log = log;
@@ -54,12 +54,12 @@ public class SocketServer {
     private void checkAddress(SocketEndpoint socketEndpoint) throws EndpointAlreadyBoundException {
         ProcessorSocketListener alreadyBound = bound.get(socketEndpoint.getBindSocketAddress());
         if (alreadyBound != null) {
-            throw new EndpointAlreadyBoundException("Endpoint " + socketEndpoint.getBindSocketAddress() + " already bound");
+            throw new EndpointAlreadyBoundException("Endpoint " + socketEndpoint.getBindSocketAddress() + " already bound by " + Spell.get(alreadyBound));
         }
     }
 
     private void startNewListener(SocketEndpoint socketEndpoint, SocketProcessor socketProcessor) throws EndpointBindFailedException {
-        ProcessorSocketListener socketListener = null;
+        ProcessorSocketListener socketListener;
         try {
             socketListener = new ProcessorSocketListener(
                     log,
@@ -77,13 +77,17 @@ public class SocketServer {
 
     public synchronized SocketProcessor get(SocketEndpoint socketEndpoint) {
         ProcessorSocketListener listener = bound.get(socketEndpoint.getBindSocketAddress());
-        return listener == null ? null : listener.getSocketProcessor();
+        if (listener != null && listener.getSocketFactory().equals(socketEndpoint.getSocketFactory())) {
+            return listener.getSocketProcessor();
+        } else {
+            return null;
+        }
     }
 
-    public synchronized SocketProcessor unregister(SocketEndpoint socketEndpoint) {
+    public synchronized void unregister(SocketEndpoint socketEndpoint) {
         final ProcessorSocketListener listener = bound.remove(socketEndpoint.getBindSocketAddress());
         if (listener == null) {
-            return null;
+            return;
         }
         new Thread(listener.getName() + "-killer") {
             @Override public void run() {
@@ -95,7 +99,6 @@ public class SocketServer {
                 }
             }
         }.start();
-        return listener.getSocketProcessor();
     }
 
     public LogDome getLog() {
